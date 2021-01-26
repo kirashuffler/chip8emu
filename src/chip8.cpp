@@ -4,6 +4,7 @@
 #include <map>
 #include <thread>
 #include <chrono>
+#include <bitset>
 
 std::map<char,uint8_t> key_map =
 {
@@ -28,7 +29,7 @@ std::map<char,uint8_t> key_map =
 	{'v', 0xF},
 };
 
-unsigned char chip8_fontset[FONTS_COUNT] =
+constexpr unsigned char chip8_fontset[FONTS_COUNT] =
 { 
 	0xF0, 0x90, 0x90, 0x90, 0xF0, //0
 	0x20, 0x60, 0x20, 0x20, 0x70, //1
@@ -112,14 +113,10 @@ void Chip8::init()
 	pc = 0x200;
 	opcode = 0;
 	I = 0;
-	for (uint16_t i = 0; i < MEMORY_SIZE; ++i)
-		memory[i] = 0;
-	for (uint16_t i = 0; i < GFX_HEIGHT * GFX_WIDTH; ++i)
-		gfx[i] = 0;
-	for (uint16_t i = 0; i < REGS_COUNT; ++i)
-		V[i] = 0;
-	for (uint16_t i = 0; i < FONTS_COUNT; ++i)
-		memory[i] = chip8_fontset[i];
+	std::memset(memory, 0, MEMORY_SIZE);
+	std::memset(gfx, 0, GFX_HEIGHT * GFX_WIDTH);
+	std::memset(V, 0, REGS_COUNT);
+	std::memcpy(memory, chip8_fontset, FONTS_COUNT);
 	drawFlag = true;
 	initOPCFunctors();
 }
@@ -128,9 +125,7 @@ void Chip8::fetchOPC()
 {
 	if (pc < 0x200)
 		std::cerr << "WRONG MEM ACCESS";
-	std::cout << "DBG: pc = " << std::hex << pc << std::endl;
 	opcode = (memory[pc] << 8) | memory[pc + 1];
-	std::cout << "DBG: Opcode = " << std::hex << opcode << std::endl;
 	pc += 2;
 }
 
@@ -142,34 +137,26 @@ void Chip8::dispClear()
 
 void Chip8::gfxConfSprite(uint8_t &x, uint8_t &y, uint8_t &n)
 {
-	uint8_t width = 8;
+	uint8_t xPos = V[x] % GFX_WIDTH;
+	uint8_t yPos = V[y] % GFX_HEIGHT;
 	uint8_t height = n;
-	uint16_t mem_addr = I;
 	V[0xF] = 0;
-	for (uint8_t yline = 0; yline < height; ++yline)
+	for (size_t row = 0; row < height; ++row)
 	{
-		uint8_t pixel = memory[mem_addr + yline];
-		for (uint8_t xline = 0; xline < width; ++xline)
+		uint8_t spriteByte = memory[I + row];
+		for (size_t col = 0; col < 8; ++col)
 		{
-			/*
-			try 
+			uint8_t spritePixel = spriteByte & (0x80 >> col);
+			uint32_t* screenPixel = &gfx[(yPos + row) * GFX_WIDTH + (xPos + col)];
+
+			if (spritePixel)
 			{
-				//uint8_t prevPixelState = gfx[start_pos + GFX_WIDTH * i + bit]; 
-				gfx[start_pos + GFX_WIDTH * i + bit] ^= ((line & (1 << bit)) << bit);
-				VFStatus += ((prevPixelState != 0) && (gfx[start_pos + GFX_WIDTH * i + bit] == 0)) ? 1 : 0;
-			}
-			catch (...)
-			{
-				std::cout << "GFX Error: Boundaries of GFX array are violated.";
-			} 
-			*/			
-			if ((pixel & (0x80 >> xline)) != 0)
-			{
-				if (gfx[(V[x] + xline + ((V[y] + yline) * GFX_WIDTH)) % (GFX_WIDTH * GFX_HEIGHT)] == 1)
+				if (*screenPixel == 0xFFFFFFFF)
 					V[0xF] = 1;
+			*screenPixel ^= 0xFFFFFFFF;
 			}
-			gfx[(V[x] + xline + ((V[y] + yline) * GFX_WIDTH)) % (GFX_WIDTH * GFX_HEIGHT)] ^= 1;
 		}
+		std::bitset<8> bitrep(spriteByte);
 	}
 	drawFlag = true;
 }
@@ -182,14 +169,8 @@ void Chip8::execOPC()
 
 void Chip8::emulateCycle()
 {
-	debugRender();
-	std::cout << "REGS VALS:";
-	for (uint8_t i = 0; i < REGS_COUNT; ++i)
-		std::cout << std::hex << "0x" << (int)V[i] << ' ';
-	std::cout << std::endl;
-	std::cout << "I VALUE:" << std::hex << "0x" << (int)I << std::endl;
-	std::this_thread::sleep_for(std::chrono::milliseconds(500));
 	execOPC();
+	std::this_thread::sleep_for(std::chrono::milliseconds(16));
 	delay_timer -= (delay_timer > 0) ? 1 : 0;
 	if (sound_timer > 0)
 	{
@@ -197,8 +178,6 @@ void Chip8::emulateCycle()
 			std::cout << "BEEP!" << std::endl;
 		--sound_timer;
 	}
-	std::cout << std::endl;
-	std::cout << std::endl;
 }
 
 int Chip8::get_key()

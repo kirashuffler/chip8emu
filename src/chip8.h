@@ -1,17 +1,16 @@
-#ifndef CHIP8_
-#define CHIP8_
+#pragma once
 
 #include <functional>
 #include <cstdint>
 #include <stack>
 
-#define MEMORY_SIZE 4096
-#define GFX_WIDTH 64
-#define GFX_HEIGHT 32
-#define STACK_SIZE 16
-#define KEYS_COUNT 16
-#define REGS_COUNT 16
-#define FONTS_COUNT 80
+constexpr uint16_t MEMORY_SIZE = 4096;
+constexpr uint8_t GFX_WIDTH = 64;
+constexpr uint8_t GFX_HEIGHT = 32;
+constexpr uint8_t STACK_SIZE = 16;
+constexpr uint8_t  KEYS_COUNT = 16;
+constexpr uint8_t  REGS_COUNT = 16;
+constexpr uint8_t  FONTS_COUNT = 80;
 
 class Chip8 {
 private:
@@ -88,9 +87,7 @@ public:
 	void keyboardDown(unsigned char inputKey, int x, int y);
 	bool loadApplication(const char * filename);
 	//Graphics pixels states (0, 1) array.
-	uint8_t gfx[GFX_WIDTH * GFX_HEIGHT];
+	uint32_t gfx[GFX_WIDTH * GFX_HEIGHT];
 	//input keys 
 	uint8_t key[KEYS_COUNT];
 };
-
-#endif CHIP8_

@@ -248,7 +248,7 @@ void Chip8::opcFX55()
 	uint8_t X = (opcode & 0x0F00) >> 8;
 	for (uint8_t incr = 0; incr <= X; ++incr)
 		memory[I + incr] = V[incr];
-	I += X + 1;
+	//I += X + 1;
 }
 
 void Chip8::opcFX65()
@@ -256,6 +256,6 @@ void Chip8::opcFX65()
 	uint8_t X = (opcode & 0x0F00) >> 8;
 	for (uint8_t incr = 0; incr <= X; ++incr)
 		V[incr] = memory[I + incr];
-	I += X + 1;
+	//I += X + 1;
 }
 		
