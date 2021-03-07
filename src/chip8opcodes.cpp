@@ -1,11 +1,9 @@
 #include "chip8.h"
-#include <iostream>
-#include <iterator>
 
 //opcXXXX methods
 void Chip8::opc0()
 {
-	switch (opcode & 0xF)
+	switch (opcode->get000F())
 	{
 	case 0:
 		Chip8::dispClear();
@@ -13,104 +11,92 @@ void Chip8::opc0()
 		break;
 	case 0xE:
 		//std::cout << "DBG: Popping value from stack: 0x" << std::hex << pcstack.top() << std::endl;
-		pc = pcstack.top();
+		pc->set(pcstack.top());
 		pcstack.pop();
+		break;
 	}
 }
 
 void Chip8::opc1NNN()
 {
-	pc = opcode & 0x0FFF;
+	pc->set(opcode->get0FFF());
 }
 
 void Chip8::opc2NNN()
 {
-	pcstack.push(pc);
+	pcstack.push(pc->get());
 	//std::cout << "DBG: Pushing value on stack: 0x" << std::hex << pcstack.top() << std::endl;
-	pc = opcode & 0x0FFF;
+	pc->set(opcode->get0FFF());
 }
 
 void Chip8::opc3XNN()
 {
-	uint8_t X = (opcode & 0x0F00) >> 8;
-	if (V[X] == (opcode & 0x00FF))
-		pc += 2;
+	if (V[opcode->getX()] == opcode->get00FF())
+		pc->Incr();
 }
 
 void Chip8::opc4XNN()
 {
-	uint8_t X = (opcode & 0x0F00) >> 8;
-	if (V[X] != (opcode & 0x00FF))
-		pc += 2;
+	if (V[opcode->getX()] != opcode->get00FF())
+		pc->Incr();
 }
 
 void Chip8::opc5XY0()
 {
-	uint8_t X = (opcode & 0x0F00) >> 8;
-	uint8_t Y = (opcode & 0x00F0) >> 4;
-	if (V[X] == V[Y])
-		pc += 2;
+	if (V[opcode->getX()] == V[opcode->getY()])
+		pc->Incr();
 }
 
 void Chip8::opc6XNN()
 {
-	uint8_t X = (opcode & 0x0F00) >> 8;
-	V[X] = opcode & 0x00FF;
+	V[opcode->getX()] = opcode->get00FF();
 }
 
 void Chip8::opc7XNN()
 {
-	uint8_t X = (opcode & 0x0F00) >> 8;
-	V[X] += opcode & 0x00FF;
+	V[opcode->getX()] += opcode->get00FF();
 }
 
 void Chip8::opc8()
 {
-	(this->*opcodes_8xy[(opcode & 0x000F)])();
+	(this->*opcodes_8xy[opcode->get000F()])();
 }
 
 void Chip8::opc9XY0()
 {
-	uint8_t X = (opcode & 0x0F00) >> 8;
-	uint8_t Y = (opcode & 0x00F0) >> 4;
-	if (V[X] != V[Y])
-		pc += 2;
+	if (V[opcode->getX()] != V[opcode->getY()])
+		pc->Incr();
 }
 
 void Chip8::opcANNN()
 {
-	I = opcode & 0x0FFF;
+	I = opcode->get0FFF();
 }
 
 void Chip8::opcBNNN()
 {
-	pc = V[0] + 0x0FFF;
+	pc->set(V[0] + opcode->get0FFF());
 }
 
 void Chip8::opcCXNN()
 {
-	uint8_t X = (opcode & 0x0F00) >> 8;
-	V[X] = (std::rand() % 0xFF) & (opcode & 0x00FF);
+	V[opcode->getX()] = (std::rand() % 0xFF) & (opcode->get00FF());
 }
 
 void Chip8::opcDXYN()
 {
-	uint8_t X = (opcode & 0x0F00) >> 8;
-	uint8_t Y = (opcode & 0x00F0) >> 4;
-	uint8_t N = opcode & 0x000F;
-	gfxConfSprite(X, Y, N);
+	gfxConfSprite(opcode->getX(), opcode->getY(), opcode->get000F());
 }
 
 void Chip8::opcE()
 {
-	uint8_t X = (opcode & 0x0F00) >> 8;
-	switch (opcode & 0x00FF)
+	switch (opcode->get00FF())
 	{
 	case 0x9E:
-		pc += (key[V[X]] != 0) ? 2 : 0;
+		if (key[V[opcode->getX()]] != 0) pc->Incr();
 		break;
 	case 0xA1:
-		pc += (key[V[X]] == 0) ? 2 : 0;
+		if (key[V[opcode->getY()]] == 0) pc->Incr();
 		break;
 	default:
 		break;
@@ -119,142 +105,115 @@ void Chip8::opcE()
 
 void Chip8::opcF()
 {
-	(this->*opcodes_fx[opcode & 0x00FF])();
+	(this->*opcodes_fx[opcode->get00FF()])();
 }
 
 //opc8XXX methods (arithmetics)
 void Chip8::opc8XY0()
 {
-	uint8_t X = (opcode & 0x0F00) >> 8;
-	uint8_t Y = (opcode & 0x00F0) >> 4;
-	V[X] = V[Y];
+	V[opcode->getX()] = V[opcode->getY()];
 }
 
 void Chip8::opc8XY1()
 {
-	uint8_t X = (opcode & 0x0F00) >> 8;
-	uint8_t Y = (opcode & 0x00F0) >> 4;
-	V[X] |= V[Y];
+	V[opcode->getX()] |= V[opcode->getY()];
 }
 
 void Chip8::opc8XY2()
 {
-	uint8_t X = (opcode & 0x0F00) >> 8;
-	uint8_t Y = (opcode & 0x00F0) >> 4;
-	V[X] &= V[Y];
+	V[opcode->getX()] &= V[opcode->getY()];
 }
 
 void Chip8::opc8XY3()
 {
-	uint8_t X = (opcode & 0x0F00) >> 8;
-	uint8_t Y = (opcode & 0x00F0) >> 4;
-	V[X] ^= V[Y];
+	V[opcode->getX()] ^= V[opcode->getY()];
 }
 
 void Chip8::opc8XY4()
 {
-	uint8_t X = (opcode & 0x0F00) >> 8;
-	uint8_t Y = (opcode & 0x00F0) >> 4;
 	//Check if there is carry
-	V[0xF] = (V[Y] > (0xFF - V[X])) ? 1 : 0;
-	V[X] += V[Y];
+	V[0xF] = (V[opcode->getY()] > (0xFF - V[opcode->getX()])) ? 1 : 0;
+	V[opcode->getX()] += V[opcode->getY()];
 }
 
 void Chip8::opc8XY5()
 {
-	uint8_t X = (opcode & 0x0F00) >> 8;
-	uint8_t Y = (opcode & 0x00F0) >> 4;
 	//Check if there is borrow
-	V[0xF] = (V[X] < V[Y]) ? 0 : 1;
-	V[X] -= V[Y];
+	V[0xF] = (V[opcode->getX()] < V[opcode->getY()]) ? 0 : 1;
+	V[opcode->getX()] -= V[opcode->getY()];
 }
 
 void Chip8::opc8XY6()
 {
-	uint8_t X = (opcode & 0x0F00) >> 8;
-	uint8_t Y = (opcode & 0x00F0) >> 4;
-	V[0xF] = V[X] & 0x1;
-	V[X] >>= 1;
+	V[0xF] = V[opcode->getX()] & 0x1;
+	V[opcode->getX()] >>= 1;
 }
 
 void Chip8::opc8XY7()
 {
-	uint8_t X = (opcode & 0x0F00) >> 8;
-	uint8_t Y = (opcode & 0x00F0) >> 4;
-	V[0xF] = (V[X] > V[Y]) ? 0 : 1;
-	V[X] = V[Y] - V[X];
+	V[0xF] = (V[opcode->getX()] > V[opcode->getY()]) ? 0 : 1;
+	V[opcode->getX()] = V[opcode->getY()] - V[opcode->getX()];
 
 }
 
 void Chip8::opc8XYE()
 {
-	uint8_t X = (opcode & 0x0F00) >> 8;
-	uint8_t Y = (opcode & 0x00F0) >> 4;
-	V[0xF] = V[X] >> 7;
-	V[X] <<= 1;
+	V[0xF] = V[opcode->getX()] >> 7;
+	V[opcode->getX()] <<= 1;
 }
 
 void Chip8::opcFX07()
 {
-	uint8_t X = (opcode & 0x0F00) >> 8;
-	V[X] = delay_timer; 
+	V[opcode->getX()] = delay_timer; 
 }
 
 void Chip8::opcFX0A()
 {
-	uint8_t X = (opcode & 0x0F00) >> 8;
 	uint8_t key_pressed = get_key();
 	if (key_pressed >= 0)
-		V[X] = key_pressed;
+		V[opcode->getX()] = key_pressed;
 	else
-		pc -= 2;
+		pc->Decr();
 }
 
 void Chip8::opcFX15()
 {
-	uint8_t X = (opcode & 0x0F00) >> 8;
-	delay_timer = V[X];
+	delay_timer = V[opcode->getX()];
 }
 
 void Chip8::opcFX18()
 {
-	uint8_t X = (opcode & 0x0F00) >> 8;
-	V[X] = sound_timer;
+	V[opcode->getX()] = sound_timer;
 }
 
 void Chip8::opcFX1E()
 {
-	uint8_t X = (opcode & 0x0F00) >> 8;
-	V[0xF] = (I + V[X] > 0xFFF) ? 1 : 0;
-	I += V[X];
+	V[0xF] = (I + V[opcode->getX()] > 0xFFF) ? 1 : 0;
+	I += V[opcode->getX()];
 }
 
 void Chip8::opcFX29()
 {
-	uint8_t X = (opcode & 0x0F00) >> 8;
-	I = V[X] * 0x5;
+	I = V[opcode->getX()] * 0x5;
 }
 
 void Chip8::opcFX33()
 {
-	uint8_t X = (opcode & 0x0F00) >> 8;
-	memory[I] = V[X] / 100;
-	memory[I + 1] = (V[X] % 100) / 10;
-	memory[I + 2] = V[X] % 10;
+	memory[I] = V[opcode->getX()] / 100;
+	memory[I + 1] = (V[opcode->getX()] % 100) / 10;
+	memory[I + 2] = V[opcode->getX()] % 10;
 }
 
 void Chip8::opcFX55()
 {
-	uint8_t X = (opcode & 0x0F00) >> 8;
-	for (uint8_t incr = 0; incr <= X; ++incr)
+	for (uint8_t incr = 0; incr <= opcode->getX(); ++incr)
 		memory[I + incr] = V[incr];
 	//I += X + 1;
 }
 
 void Chip8::opcFX65()
 {
-	uint8_t X = (opcode & 0x0F00) >> 8;
-	for (uint8_t incr = 0; incr <= X; ++incr)
+	for (uint8_t incr = 0; incr <= opcode->getX(); ++incr)
 		V[incr] = memory[I + incr];
 	//I += X + 1;
 }

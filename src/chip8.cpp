@@ -1,53 +1,12 @@
 #include "chip8.h"
-#include <stdlib.h>
-#include <iostream>
-#include <map>
-#include <thread>
-#include <chrono>
-#include <bitset>
 
-std::map<char,uint8_t> key_map =
-{
-	{'1', 0x1},
-	{'2', 0x2},
-	{'3', 0x3},
-	{'4', 0xC},
+Chip8* Chip8::chip8_ = nullptr;
 
-	{'q', 0x4},
-	{'w', 0x5},
-	{'e', 0x6},
-	{'r', 0xD},
-	
-	{'a', 0x7},
-	{'s', 0x8},
-	{'d', 0x9},
-	{'f', 0xE},
-
-	{'z', 0xA},
-	{'x', 0x0},
-	{'c', 0xB},
-	{'v', 0xF},
-};
-
-constexpr unsigned char chip8_fontset[FONTS_COUNT] =
-{ 
-	0xF0, 0x90, 0x90, 0x90, 0xF0, //0
-	0x20, 0x60, 0x20, 0x20, 0x70, //1
-	0xF0, 0x10, 0xF0, 0x80, 0xF0, //2
-	0xF0, 0x10, 0xF0, 0x10, 0xF0, //3
-	0x90, 0x90, 0xF0, 0x10, 0x10, //4
-	0xF0, 0x80, 0xF0, 0x10, 0xF0, //5
-	0xF0, 0x80, 0xF0, 0x90, 0xF0, //6
-	0xF0, 0x10, 0x20, 0x40, 0x40, //7
-	0xF0, 0x90, 0xF0, 0x90, 0xF0, //8
-	0xF0, 0x90, 0xF0, 0x10, 0xF0, //9
-	0xF0, 0x90, 0xF0, 0x90, 0x90, //A
-	0xE0, 0x90, 0xE0, 0x90, 0xE0, //B
-	0xF0, 0x80, 0x80, 0x80, 0xF0, //C
-	0xE0, 0x90, 0x90, 0x90, 0xE0, //D
-	0xF0, 0x80, 0xF0, 0x80, 0xF0, //E
-	0xF0, 0x80, 0xF0, 0x80, 0x80  //F
-};
+Chip8* Chip8::GetInstance(const std::string& name) {
+	if (chip8_ == nullptr)
+		chip8_ = new Chip8(name);
+	return chip8_;
+}
 
 void Chip8::debugRender()
 {
@@ -110,8 +69,8 @@ void Chip8::initOPCFunctors()
 void Chip8::init()
 {
 	waiting_for_key = false;
-	pc = 0x200;
-	opcode = 0;
+	pc->set(0x200);
+	opcode->set(0);
 	I = 0;
 	std::memset(memory, 0, MEMORY_SIZE);
 	std::memset(gfx, 0, GFX_HEIGHT * GFX_WIDTH);
@@ -123,10 +82,10 @@ void Chip8::init()
 
 void Chip8::fetchOPC()
 {
-	if (pc < 0x200)
+	if (pc->get() < 0x200)
 		std::cerr << "WRONG MEM ACCESS";
-	opcode = (memory[pc] << 8) | memory[pc + 1];
-	pc += 2;
+	opcode->set((memory[pc->get()] << 8) | memory[pc->get() + 1]);
+	pc->Incr();
 }
 
 void Chip8::dispClear()
@@ -135,7 +94,7 @@ void Chip8::dispClear()
 		gfx[i] = 0;
 }
 
-void Chip8::gfxConfSprite(uint8_t &x, uint8_t &y, uint8_t &n)
+void Chip8::gfxConfSprite(const uint8_t &x,const uint8_t &y,const uint8_t &n)
 {
 	uint8_t xPos = V[x] % GFX_WIDTH;
 	uint8_t yPos = V[y] % GFX_HEIGHT;
@@ -164,7 +123,7 @@ void Chip8::gfxConfSprite(uint8_t &x, uint8_t &y, uint8_t &n)
 void Chip8::execOPC()
 {
 	fetchOPC();
-	(this->*opcodes_[(opcode >> 12)])();
+	(this->*opcodes_[opcode->getF000()])();
 }
 
 void Chip8::emulateCycle()
